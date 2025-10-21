@@ -20,7 +20,7 @@ pub fn build(b: *std.Build) !void {
     // set a preferred release mode, allowing the user to decide how to optimize.
     const optimize = b.standardOptimizeOption(.{});
 
-    var module = b.addModule("skia-zig", .{
+    var module = b.addModule("skia_zig", .{
         .target = target,
         .optimize = optimize,
         .root_source_file = b.path("src/main.zig"),
