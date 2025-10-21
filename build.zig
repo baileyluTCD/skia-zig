@@ -10,29 +10,33 @@ pub fn build(b: *std.Build) !void {
     // for restricting supported target set are available.
     const target = b.standardTargetOptions(.{});
 
-    if (target.result.os.tag == .windows and target.result.abi != .msvc) {
-        std.debug.print("Error: Skia requires the `msvc` abi on Windows. Please specify the abi using the build command (e.g. `zig build -Dtarget=x86_64-windows-msvc`) or force it by requesting it in the default_target of b.standardTargetOptions.", .{});
-        //return error.SkiaRequiresMSVConWin; // Temporarily disabled as this breaks ZLS
-    }
-
     // Standard optimization options allow the person running `zig build` to select
     // between Debug, ReleaseSafe, ReleaseFast, and ReleaseSmall. Here we do not
     // set a preferred release mode, allowing the user to decide how to optimize.
     const optimize = b.standardOptimizeOption(.{});
 
+    const c_translate = b.addTranslateC(.{
+        .link_libc = true,
+        .target = target,
+        .optimize = optimize,
+        .root_source_file = b.addWriteFiles().add("c.h",
+            \\ #include "gr_context.h"
+            \\ #include "sk_canvas.h"
+            \\ #include "sk_colorspace.h"
+            \\ #include "sk_data.h"
+            \\ #include "sk_image.h"
+            \\ #include "sk_paint.h"
+            \\ #include "sk_path.h"
+            \\ #include "sk_surface.h"
+        ),
+    });
+
     var module = b.addModule("skia_zig", .{
         .target = target,
         .optimize = optimize,
-        .root_source_file = b.path("src/main.zig"),
+        .root_source_file = c_translate,
     });
 
-    switch (target.result.os.tag) {
-        .windows => {
-            var path: [128:0]u8 = undefined;
-            module.addLibraryPath(b.path(try std.fmt.bufPrint(&path, "skia/lib/win-{s}", .{@tagName(target.result.cpu.arch)})));
-        },
-        else => return error.PlatformNotSupported,
-    }
     module.linkSystemLibrary("skia", .{ .preferred_link_mode = .static });
     module.link_libc = true;
 }
