@@ -19,24 +19,21 @@ pub fn build(b: *std.Build) !void {
         .link_libc = true,
         .target = target,
         .optimize = optimize,
-        .root_source_file = b.addWriteFiles().add("c.h",
-            \\ #include "gr_context.h"
-            \\ #include "sk_canvas.h"
-            \\ #include "sk_colorspace.h"
-            \\ #include "sk_data.h"
-            \\ #include "sk_image.h"
-            \\ #include "sk_paint.h"
-            \\ #include "sk_path.h"
-            \\ #include "sk_surface.h"
-        ),
+        .root_source_file = b.path("includes.h"),
     });
 
-    var module = b.addModule("skia_zig", .{
+    const c_mod = c_translate.createModule();
+    c_mod.linkSystemLibrary("skia", .{ .preferred_link_mode = .static });
+
+    _ = b.addModule("skia_zig", .{
         .target = target,
         .optimize = optimize,
-        .root_source_file = c_translate,
+        .root_source_file = b.path("src/root.zig"),
+        .imports = &.{
+            .{
+                .name = "skia_c",
+                .module = c_mod,
+            },
+        },
     });
-
-    module.linkSystemLibrary("skia", .{ .preferred_link_mode = .static });
-    module.link_libc = true;
 }
